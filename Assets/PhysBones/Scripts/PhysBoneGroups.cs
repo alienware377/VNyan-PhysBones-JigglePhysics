@@ -504,7 +504,7 @@ namespace PhysBones
             if (selectedChain == null) { SetStatus("pick a chain to paste onto"); return; }
             List<ChainConfig> targets = new List<ChainConfig>();
             targets.Add(selectedChain);
-            List<ChainConfig> peers = LinkedPeers(selectedChain);
+            List<ChainConfig> peers = EditPeers();
             targets.AddRange(peers);
             RecordUndo("paste", targets);
             ApplyTuning(clipboard, targets);
@@ -613,6 +613,7 @@ namespace PhysBones
 
         void OnToggleThisClicked()
         {
+            if (editGroup != null) { SetStatus("a whole group is picked at the top: pick one chain there first"); return; }
             if (selectedChain == null) { SetStatus("pick a chain first"); return; }
             ChainGroupConfig g = ActiveGroup();
             if (g == null) { SetStatus("no group yet: press New to make one"); return; }
@@ -625,6 +626,9 @@ namespace PhysBones
 
         void RefreshGroupUI()
         {
+            SyncEditGroup();
+            UpdateTreeCaption();
+            if (treePanel != null && treePanel.activeSelf) RebuildTreeRows(false);
             if (!groupUiReady || config == null) return;
             if (clipLabel != null)
                 clipLabel.text = clipboard == null ? "clipboard: empty" : "clipboard: " + clipboard.from;

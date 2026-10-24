@@ -218,6 +218,8 @@ namespace PhysBones
             RefreshChainList();
             try { SetupGroupsUI(); }
             catch (Exception e) { Debug.LogWarning("[PhysBones] copy/paste + groups section failed: " + e); }
+            try { SetupTree(); }
+            catch (Exception e) { Debug.LogWarning("[PhysBones] chain tree failed: " + e); }
 
             // Hidden until the plugin button is clicked.
             window.SetActive(false);
@@ -285,26 +287,14 @@ namespace PhysBones
                 suppressCallbacks = false;
             }
 
-            if (chainDropdown == null) return;
-
-            List<string> opts = new List<string>();
-            if (config.chains != null)
-                for (int i = 0; i < config.chains.Count; i++)
-                {
-                    ChainConfig c = config.chains[i];
-                    string nm = (c != null && !string.IsNullOrEmpty(c.name)) ? c.name : ("chain " + i);
-                    opts.Add(nm);
-                }
-
-            suppressCallbacks = true;
-            chainDropdown.ClearOptions();
-            chainDropdown.AddOptions(opts);
-            chainDropdown.value = 0;
-            chainDropdown.RefreshShownValue();
-            suppressCallbacks = false;
-
-            if (opts.Count > 0) SelectChain(0);
-            else selectedChain = null;
+            // The picker at the top is a folder tree (PhysBoneTree.cs); keep what was shown when the
+            // window is reopened, as long as it still exists.
+            if (editGroup != null && (config.groups == null || !config.groups.Contains(editGroup))) editGroup = null;
+            if (editGroup != null) { SyncEditGroup(); if (selectedChain != null) PushChainToUI(); else UpdateTreeCaption(); }
+            else if (selectedChain != null && config.chains != null && config.chains.Contains(selectedChain))
+                SelectChain(config.chains.IndexOf(selectedChain));
+            else if (config.chains != null && config.chains.Count > 0) SelectChain(0);
+            else { selectedChain = null; UpdateTreeCaption(); }
         }
 
         void OnChainSelected(int index)
@@ -315,6 +305,7 @@ namespace PhysBones
 
         void SelectChain(int index)
         {
+            editGroup = null;
             if (config == null || config.chains == null ||
                 index < 0 || index >= config.chains.Count)
             {
@@ -369,8 +360,8 @@ namespace PhysBones
             if (suppressCallbacks || selectedChain == null) return;
 
             SetTuningValue(selectedChain, key, v);
-            // Chains sharing a linked group with this one follow the edit.
-            foreach (ChainConfig peer in LinkedPeers(selectedChain)) SetTuningValue(peer, key, v);
+            // Chains of a group picked at the top, or sharing a linked group, follow the edit.
+            foreach (ChainConfig peer in EditPeers()) SetTuningValue(peer, key, v);
             UpdateValueLabel(key, v);
             // PhysBoneChain reads ChainConfig live each substep, so this is instant.
         }
@@ -401,7 +392,7 @@ namespace PhysBones
         {
             if (suppressCallbacks || selectedChain == null) return;
             selectedChain.limitType = on ? "angle" : "none";
-            foreach (ChainConfig peer in LinkedPeers(selectedChain)) peer.limitType = selectedChain.limitType;
+            foreach (ChainConfig peer in EditPeers()) peer.limitType = selectedChain.limitType;
         }
 
         void OnReloadClicked()
@@ -423,14 +414,18 @@ namespace PhysBones
                 SetStatus("nothing to remove");
                 return;
             }
-            if (selectedChain == null || chainDropdown == null)
+            if (editGroup != null)
+            {
+                SetStatus("a whole group is picked: pick one chain at the top to remove it (Delete below removes only the group)");
+                return;
+            }
+            if (selectedChain == null)
             {
                 SetStatus("no chain selected");
                 return;
             }
 
             int idx = config.chains.IndexOf(selectedChain);
-            if (idx < 0) idx = chainDropdown.value;
             if (idx < 0 || idx >= config.chains.Count)
             {
                 SetStatus("no chain selected");
@@ -446,15 +441,7 @@ namespace PhysBones
             RefreshChainList();
 
             // Reselect a sensible neighbour so the window keeps showing a valid chain.
-            if (config.chains.Count > 0 && chainDropdown != null)
-            {
-                int next = Mathf.Clamp(idx, 0, config.chains.Count - 1);
-                suppressCallbacks = true;
-                chainDropdown.value = next;
-                chainDropdown.RefreshShownValue();
-                suppressCallbacks = false;
-                SelectChain(next);
-            }
+            if (config.chains.Count > 0) SelectChain(Mathf.Clamp(idx, 0, config.chains.Count - 1));
 
             SetStatus("removed chain '" + removed + "'. Save to keep this change");
         }
@@ -853,15 +840,7 @@ namespace PhysBones
             RebuildPickerRows();
 
             // Select the newly added chain in the tuning window.
-            int idx = config.chains.Count - 1;
-            if (chainDropdown != null && idx >= 0 && idx < chainDropdown.options.Count)
-            {
-                suppressCallbacks = true;
-                chainDropdown.value = idx;
-                chainDropdown.RefreshShownValue();
-                suppressCallbacks = false;
-                SelectChain(idx);
-            }
+            SelectChain(config.chains.Count - 1);
 
             SetBoneStatus("added chain '" + ch.name + "': tune it in the main window, then Save");
             SetStatus("added chain '" + ch.name + "' (root: " + ch.rootBone + ")");
