@@ -513,7 +513,7 @@ namespace JigglePhysics
             if (selected == null) { SetStatus("pick a bone to paste onto"); return; }
             List<JiggleBoneConfig> targets = new List<JiggleBoneConfig>();
             targets.Add(selected);
-            List<JiggleBoneConfig> peers = LinkedPeers(selected);
+            List<JiggleBoneConfig> peers = EditPeers();
             targets.AddRange(peers);
             RecordUndo("paste", targets);
             ApplyTuning(clipboard, targets);
@@ -627,6 +627,7 @@ namespace JigglePhysics
 
         void OnToggleThisClicked()
         {
+            if (editGroup != null) { SetStatus("a whole group is picked at the top: pick one bone there first"); return; }
             if (selected == null) { SetStatus("pick a bone first"); return; }
             JiggleGroupConfig g = ActiveGroup();
             if (g == null) { SetStatus("no group yet: press New to make one"); return; }
@@ -639,6 +640,9 @@ namespace JigglePhysics
 
         void RefreshGroupUI()
         {
+            SyncEditGroup();
+            UpdateTreeCaption();
+            if (treePanel != null && treePanel.activeSelf) RebuildTreeRows(false);
             if (!groupUiReady || config == null) return;
             if (clipLabel != null)
                 clipLabel.text = clipboard == null ? "clipboard: empty" : "clipboard: " + clipboard.from;

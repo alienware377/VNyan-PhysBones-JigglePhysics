@@ -199,6 +199,8 @@ namespace JigglePhysics
             RefreshBoneList();
             try { SetupGroupsUI(); }
             catch (Exception e) { Debug.LogWarning("[Jiggle] copy/paste + groups section failed: " + e); }
+            try { SetupTree(); }
+            catch (Exception e) { Debug.LogWarning("[Jiggle] bone tree failed: " + e); }
             window.SetActive(false);
         }
 
@@ -258,26 +260,14 @@ namespace JigglePhysics
                 suppressCallbacks = false;
             }
 
-            if (boneDropdown == null) return;
-
-            List<string> opts = new List<string>();
-            if (config.bones != null)
-                for (int i = 0; i < config.bones.Count; i++)
-                {
-                    JiggleBoneConfig c = config.bones[i];
-                    string nm = (c != null && !string.IsNullOrEmpty(c.name)) ? c.name : ("bone " + i);
-                    opts.Add(nm);
-                }
-
-            suppressCallbacks = true;
-            boneDropdown.ClearOptions();
-            boneDropdown.AddOptions(opts);
-            boneDropdown.value = 0;
-            boneDropdown.RefreshShownValue();
-            suppressCallbacks = false;
-
-            if (opts.Count > 0) SelectBone(0);
-            else selected = null;
+            // The picker at the top is a folder tree (JiggleTree.cs); keep what was shown when the
+            // window is reopened, as long as it still exists.
+            if (editGroup != null && (config.groups == null || !config.groups.Contains(editGroup))) editGroup = null;
+            if (editGroup != null) { SyncEditGroup(); if (selected != null) PushToUI(); else UpdateTreeCaption(); }
+            else if (selected != null && config.bones != null && config.bones.Contains(selected))
+                SelectBone(config.bones.IndexOf(selected));
+            else if (config.bones != null && config.bones.Count > 0) SelectBone(0);
+            else { selected = null; UpdateTreeCaption(); }
         }
 
         void OnBoneSelected(int index)
@@ -288,6 +278,7 @@ namespace JigglePhysics
 
         void SelectBone(int index)
         {
+            editGroup = null;
             if (config == null || config.bones == null ||
                 index < 0 || index >= config.bones.Count)
             {
@@ -341,8 +332,8 @@ namespace JigglePhysics
         {
             if (suppressCallbacks || selected == null) return;
             SetTuningValue(selected, key, v);
-            // Bones sharing a linked group with this one follow the edit.
-            foreach (JiggleBoneConfig peer in LinkedPeers(selected)) SetTuningValue(peer, key, v);
+            // Bones of a group picked at the top, or sharing a linked group, follow the edit.
+            foreach (JiggleBoneConfig peer in EditPeers()) SetTuningValue(peer, key, v);
             UpdateValueLabel(key, v);
             // JiggleBone reads its config live each substep, so edits apply instantly.
         }
@@ -358,14 +349,14 @@ namespace JigglePhysics
         {
             if (suppressCallbacks || selected == null) return;
             selected.limitType = on ? "angle" : "none";
-            foreach (JiggleBoneConfig peer in LinkedPeers(selected)) peer.limitType = selected.limitType;
+            foreach (JiggleBoneConfig peer in EditPeers()) peer.limitType = selected.limitType;
         }
 
         void OnSelfToggled(bool on)
         {
             if (suppressCallbacks || selected == null) return;
             selected.selfCollide = on;
-            foreach (JiggleBoneConfig peer in LinkedPeers(selected)) peer.selfCollide = on;
+            foreach (JiggleBoneConfig peer in EditPeers()) peer.selfCollide = on;
             RebindAll(); // partner links are established at bind time
         }
 
@@ -388,14 +379,18 @@ namespace JigglePhysics
                 SetStatus("nothing to remove");
                 return;
             }
-            if (selected == null || boneDropdown == null)
+            if (editGroup != null)
+            {
+                SetStatus("a whole group is picked: pick one bone at the top to remove it (Delete below removes only the group)");
+                return;
+            }
+            if (selected == null)
             {
                 SetStatus("no bone selected");
                 return;
             }
 
             int idx = config.bones.IndexOf(selected);
-            if (idx < 0) idx = boneDropdown.value;
             if (idx < 0 || idx >= config.bones.Count)
             {
                 SetStatus("no bone selected");
@@ -411,15 +406,7 @@ namespace JigglePhysics
             RefreshBoneList();
 
             // Reselect a sensible neighbour so the window keeps showing a valid bone.
-            if (config.bones.Count > 0 && boneDropdown != null)
-            {
-                int next = Mathf.Clamp(idx, 0, config.bones.Count - 1);
-                suppressCallbacks = true;
-                boneDropdown.value = next;
-                boneDropdown.RefreshShownValue();
-                suppressCallbacks = false;
-                SelectBone(next);
-            }
+            if (config.bones.Count > 0) SelectBone(Mathf.Clamp(idx, 0, config.bones.Count - 1));
 
             SetStatus("removed jiggle '" + removed + "'. Save to keep this change");
         }
@@ -807,15 +794,7 @@ namespace JigglePhysics
             RefreshBoneList();
             RebuildPickerRows();
 
-            int idx = config.bones.Count - 1;
-            if (boneDropdown != null && idx >= 0 && idx < boneDropdown.options.Count)
-            {
-                suppressCallbacks = true;
-                boneDropdown.value = idx;
-                boneDropdown.RefreshShownValue();
-                suppressCallbacks = false;
-                SelectBone(idx);
-            }
+            SelectBone(config.bones.Count - 1);
 
             SetBoneStatus("added jiggle '" + bc.name + "': tune it in the main window, then Save");
             SetStatus("added jiggle '" + bc.name + "' (bone: " + bc.bone + ")");

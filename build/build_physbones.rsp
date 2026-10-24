@@ -23,3 +23,4 @@
 "Assets\PhysBones\Scripts\NativeFileDialog.cs"
 "Assets\PhysBones\Scripts\PhysBoneGroups.cs"
 "Assets\PhysBones\Scripts\PhysBoneGroupsSelfTest.cs"
+"Assets\PhysBones\Scripts\PhysBoneTree.cs"

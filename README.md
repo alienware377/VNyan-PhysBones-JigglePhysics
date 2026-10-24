@@ -16,7 +16,8 @@ Both have live tuning windows, and both save to your AppData folder, so you neve
 > releases (v1.0.0 to v2.4.0) are in that repo.
 
 > **New in v2.5.0:** **Copy / Paste** settings between bones or chains, and **Groups**: tick a
-> set of bones and give them all the same settings at once, or edit them together live.
+> set of bones and give them all the same settings at once, or edit them together live. The
+> picker at the top is now a **folder tree** of your groups.
 > See [Copy, paste and groups](#copy-paste-and-groups).
 
 | Plugin | Button name | What it does |
@@ -95,6 +96,12 @@ both plugins; PhysBones talks about chains, Jiggle Physics about bones.
   live. Untick it to tune members one at a time again.
 - **Delete** removes the group only; the bones keep their settings.
 
+**The picker at the top is a folder tree.** Click it and every group shows as a folder: `[+]`
+opens it to list its bones or chains, `[-]` shuts it again, and anything in no group is listed
+underneath. Click a folder's name to edit the **whole group**: the sliders show its first member,
+and every change goes to all of them (even with Edit together off). Click a single bone or chain
+to edit just that one.
+
 Groups are saved in your config, so press **Save** to keep them. Removing a bone or chain also
 takes it out of its groups.
 
@@ -140,7 +147,8 @@ Copy `config/physbones.example.json` for a fuller starting point.
 
 Click **VRChat PhysBones** in the Plugins panel to open the draggable tuning window:
 
-- **Chain** dropdown: which chain the sliders edit.
+- **Chain** picker: which chain the sliders edit, as a folder tree of your groups (pick a whole
+  group to edit all its chains at once).
 - **Physics enabled:** global on/off.
 - **Angle limit:** switches the selected chain between the `angle` and `none` limit types.
 - **Override native physics:** turns off the model's own SpringBone, DynamicBone and MagicaCloth

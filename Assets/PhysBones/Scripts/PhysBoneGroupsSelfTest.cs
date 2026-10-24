@@ -164,19 +164,47 @@ namespace PhysBones
             GT(!InGroup(g, b), "a removed chain leaves its groups");
             GT(groupNameField != null && groupNameField.text == g.name, "name box shows the group");
 
-            // Pose for a screenshot: two members, picker open.
+            // The top picker as a folder tree.
             SetMember(g, a, true);
             SetMember(g, b, true);
             g.name = "test group";
+            g.linked = false;
+            SelectGroupEdit(g);
+            GT(editGroup == g && selectedChain == a, "picking a group at the top shows its first chain");
+            float gw = a.pull > 0.5f ? 0.3f : 0.7f;
+            OnSliderChanged("pull", gw);
+            GT(a.pull == gw && b.pull == gw, "a group picked at the top edits all its chains");
+            GT(chainDropdown == null || chainDropdown.captionText == null
+                || chainDropdown.captionText.text.IndexOf("test group") >= 0, "the picker box names the group");
+            ToggleTree();
+            yield return null;
+            GT(treePanel != null && treePanel.activeSelf, "the picker opens as a tree");
+            int rowsOpen = treeContent.childCount;
+            ToggleFolder(g);
+            yield return null;
+            GT(treeContent.childCount == rowsOpen - 2, "shutting a folder hides its chains (" + rowsOpen + " rows, then " + treeContent.childCount + ")");
+            ToggleFolder(g);
+            yield return null;
+            GT(treeContent.childCount == rowsOpen, "opening it shows them again");
+            PickChain(b);
+            GT(editGroup == null && selectedChain == b && !treePanel.activeSelf, "picking a chain in the tree edits just that chain");
+            OnSliderChanged("pull", 0.5f * gw);
+            GT(b.pull == 0.5f * gw && a.pull == gw, "a single chain picked in the tree edits only itself");
+
+            // Pose for a screenshot: two members, picker and tree open.
             g.linked = true;
             RefreshGroupUI();
             RebuildPickerRows();
+            ToggleTree();
             Canvas.ForceUpdateCanvases();
             Debug.Log("[PhysBones] GROUPSTEST HOLD 25s window " + ScreenRect(window) + " | picker " + ScreenRect(picker));
             yield return new WaitForSeconds(25f);
 
+            CloseTree();
+            SelectGroupEdit(g);
             OnGroupDelete();
             GT(Groups().Count == groups0, "delete group");
+            GT(editGroup == null, "deleting the picked group lets go of it");
 
             OnReloadClicked();
             GT(config.chains.Count >= 2 && SameTuning(Tuning.Of(config.chains[0]), a0)
