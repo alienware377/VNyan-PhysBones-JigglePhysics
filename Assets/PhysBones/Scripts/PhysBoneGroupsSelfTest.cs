@@ -46,21 +46,6 @@ namespace PhysBones
             return Rect.MinMaxRect(x0, y0, x1, y1);
         }
 
-        string ScreenRect(GameObject go)
-        {
-            if (go == null) return "none";
-            RectTransform rt = go.GetComponent<RectTransform>();
-            Canvas cv = go.GetComponentInParent<Canvas>();
-            Camera cam = (cv == null || cv.renderMode == RenderMode.ScreenSpaceOverlay) ? null : cv.worldCamera;
-            Vector3[] c = new Vector3[4];
-            rt.GetWorldCorners(c);
-            Vector2 a = RectTransformUtility.WorldToScreenPoint(cam, c[0]);
-            Vector2 b = RectTransformUtility.WorldToScreenPoint(cam, c[2]);
-            return Mathf.RoundToInt(a.x) + "," + Mathf.RoundToInt(Screen.height - b.y) + " to "
-                + Mathf.RoundToInt(b.x) + "," + Mathf.RoundToInt(Screen.height - a.y)
-                + " (screen " + Screen.width + "x" + Screen.height + ")";
-        }
-
         void CheckLayout()
         {
             Rect wr = WorldRect(window.GetComponent<RectTransform>());
@@ -190,15 +175,6 @@ namespace PhysBones
             GT(editGroup == null && selectedChain == b && !treePanel.activeSelf, "picking a chain in the tree edits just that chain");
             OnSliderChanged("pull", 0.5f * gw);
             GT(b.pull == 0.5f * gw && a.pull == gw, "a single chain picked in the tree edits only itself");
-
-            // Pose for a screenshot: two members, picker and tree open.
-            g.linked = true;
-            RefreshGroupUI();
-            RebuildPickerRows();
-            ToggleTree();
-            Canvas.ForceUpdateCanvases();
-            Debug.Log("[PhysBones] GROUPSTEST HOLD 25s window " + ScreenRect(window) + " | picker " + ScreenRect(picker));
-            yield return new WaitForSeconds(25f);
 
             CloseTree();
             SelectGroupEdit(g);

@@ -147,7 +147,6 @@ namespace JigglePhysics
 
             RectTransform wrt = window.GetComponent<RectTransform>();
             if (wrt != null) wrt.anchoredPosition = new Vector2(0f, 0f);
-            CleanDashes(window);
 
             boneDropdown = FindControl<Dropdown>("Dropdown_Bone");
             enabledToggle = FindControl<Toggle>("Toggle_Enabled");
@@ -202,20 +201,6 @@ namespace JigglePhysics
             try { SetupTree(); }
             catch (Exception e) { Debug.LogWarning("[Jiggle] bone tree failed: " + e); }
             window.SetActive(false);
-        }
-
-        // Titles baked into the .vnobj still carry long dashes ("Live Tuning" headers);
-        // show them as ": " instead.
-        static void CleanDashes(GameObject root)
-        {
-            if (root == null) return;
-            Text[] texts = root.GetComponentsInChildren<Text>(true);
-            for (int i = 0; i < texts.Length; i++)
-            {
-                string s = texts[i].text;
-                if (string.IsNullOrEmpty(s) || s.IndexOf('\u2014') < 0) continue;
-                texts[i].text = s.Replace(" \u2014 ", ": ").Replace("\u2014", "").Trim();
-            }
         }
 
         T FindControl<T>(string name) where T : Component
@@ -656,7 +641,6 @@ namespace JigglePhysics
 
             RectTransform brt = boneWindow.GetComponent<RectTransform>();
             if (brt != null) brt.anchoredPosition = new Vector2(0f, 0f);
-            CleanDashes(boneWindow);
 
             boneStatus = FindIn<Text>(boneWindow, "Label_BoneStatus");
             boneContent = FindIn<RectTransform>(boneWindow, "BoneContent");

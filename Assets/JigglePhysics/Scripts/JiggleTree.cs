@@ -49,7 +49,7 @@ namespace JigglePhysics
             treeY = (wr.yMax - br.y) + 2f;
             treeW = br.x - tl.x;
 
-            // The Dropdown only shows the caption now: it must not pick by index or open its own
+            // The Dropdown only shows the caption: it must not pick by index or open its own
             // list from the keyboard (Submit would offer the one caption option).
             boneDropdown.onValueChanged.RemoveListener(OnBoneSelected);
             Navigation nav = new Navigation();

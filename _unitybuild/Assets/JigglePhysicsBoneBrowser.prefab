@@ -313,7 +313,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "Model Bones \u2014 pick a jiggle bone"
+  m_Text: 'Model Bones: pick a jiggle bone'
 --- !u!1 &7221645424192238878
 GameObject:
   m_ObjectHideFlags: 0

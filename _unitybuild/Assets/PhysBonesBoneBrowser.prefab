@@ -283,7 +283,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "Model Bones \u2014 pick a root"
+  m_Text: 'Model Bones: pick a root'
 --- !u!1 &2784799931815507767
 GameObject:
   m_ObjectHideFlags: 0

@@ -4260,7 +4260,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "VRChat PhysBones \u2014 Live Tuning"
+  m_Text: 'VRChat PhysBones: Live Tuning'
 --- !u!1 &4446824405692234842
 GameObject:
   m_ObjectHideFlags: 0

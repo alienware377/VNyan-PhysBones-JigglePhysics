@@ -4835,7 +4835,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "Jiggle Physics \u2014 Live Tuning"
+  m_Text: 'Jiggle Physics: Live Tuning'
 --- !u!1 &4767402153174190827
 GameObject:
   m_ObjectHideFlags: 0
