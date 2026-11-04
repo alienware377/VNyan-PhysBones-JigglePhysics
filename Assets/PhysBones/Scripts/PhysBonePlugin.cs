@@ -29,7 +29,7 @@ namespace PhysBones
 
         // Component-type-name substrings (lower-case) treated as native bone physics to disable.
         // "magica", not "magicacloth": MagicaCloth V1's components are named MagicaBoneCloth /
-        // MagicaBoneSpring / MagicaMeshCloth / ... - "magicacloth" is only the NAMESPACE there,
+        // MagicaBoneSpring / MagicaMeshCloth and so on. "magicacloth" is only the namespace there,
         // and matching runs against the type name, so V1 setups slipped through the override.
         static readonly string[] DEFAULT_NATIVE_TOKENS =
         {
@@ -933,10 +933,10 @@ namespace PhysBones
                 }
             }
 
-            // Two-phase bind: resolve every chain's root FIRST so the native-physics override
-            // (which scopes by chain roots) can run BEFORE Bind() captures each chain's rest
+            // Two-phase bind: resolve every chain's root first so the native-physics override
+            // (which scopes by chain roots) can run before Bind() captures each chain's rest
             // pose. Binding first meant the "rest pose" was whatever deflected pose a live
-            // native sim happened to be holding at that instant - permanently sagged/mid-swing.
+            // native sim happened to be holding at that instant, leaving it sagged or mid-swing.
             List<ChainConfig> pendCfg = new List<ChainConfig>();
             List<Transform> pendRoot = new List<Transform>();
             List<HashSet<string>> pendIgnore = new List<HashSet<string>>();

@@ -1,11 +1,11 @@
 @echo off
 setlocal
 REM ===========================================================================
-REM  Read-only diagnostic. Changes NOTHING. Produces a report file to send back.
+REM  Read-only diagnostic. Changes nothing. Produces a report file to send back.
 REM
 REM  Double-click this. Pick your VNyan folder when asked. When it finishes,
-REM  a file called VNyan_Diagnostics_Report.txt appears next to this .bat -
-REM  send that file back.
+REM  a file called VNyan_Diagnostics_Report.txt appears next to this .bat.
+REM  Send that file back.
 REM ===========================================================================
 
 set "PS=%~dp0Troubleshoot-VNyan.ps1"

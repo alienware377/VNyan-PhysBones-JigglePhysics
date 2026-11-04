@@ -199,7 +199,7 @@ namespace PhysBones
                 // length after a push-out can re-embed the tip in the collider it just left,
                 // so the pair is relaxed twice and a final collider pass guarantees the tip is
                 // handed back outside every volume (the tiny length error this leaves does not
-                // matter - only the tip's DIRECTION drives the bone rotation below).
+                // matter, because only the tip's direction drives the bone rotation below).
                 Vector3 beforeCollision = next;
                 if (colliders != null && colliders.Count > 0)
                 {
@@ -219,9 +219,9 @@ namespace PhysBones
                 j.prevTip = j.tip;
                 j.tip = next;
 
-                // The push-out must NOT read as motion next substep. Without this, the whole
-                // collider correction lands in (tip - prevTip) and Verlet re-injects it as
-                // velocity every frame - a rest pose inside a collider then oscillates forever
+                // The push-out must not read as motion on the next substep. Without this, the
+                // whole collider correction lands in (tip - prevTip) and Verlet re-injects it
+                // as velocity every frame, so a rest pose inside a collider oscillates forever
                 // instead of settling on the surface (the "exploding hair" failure).
                 j.prevTip += next - beforeCollision;
 

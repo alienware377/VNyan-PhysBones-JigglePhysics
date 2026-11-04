@@ -7,7 +7,7 @@ namespace JigglePhysics
     //
     // Breast/pectoral/belly bones are usually leaf bones (no child), so a chain solver has
     // nothing to aim. Instead we synthesise a virtual "tip" a short distance along the bone's
-    // local forward axis and simulate THAT with Verlet integration. The bone is then rotated so
+    // local forward axis and simulate that with Verlet integration. The bone is then rotated so
     // its forward points at the solved tip (the swing/jiggle), and its localScale is driven by
     // how far the tip has sagged (stretch) and how deep colliders are pressing in (squish),
     // with volume preservation so it reads as soft tissue rather than a balloon.
