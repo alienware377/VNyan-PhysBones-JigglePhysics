@@ -37,6 +37,12 @@ namespace PhysBones
         public bool IsBound { get { return bound; } }
         public int JointCount { get { return joints.Count; } }
 
+        // Every bone this chain rotates (for telling which colliders can be measured once per frame).
+        public void AddMovedBones(HashSet<Transform> into)
+        {
+            for (int i = 0; i < allBones.Count; i++) into.Add(allBones[i]);
+        }
+
         public PhysBoneChain(ChainConfig c)
         {
             cfg = c;
@@ -92,8 +98,9 @@ namespace PhysBones
         {
             if (!bound) return;
 
-            Vector3 rootDelta = root.position - prevRootPos;
-            prevRootPos = root.position;
+            Vector3 rootNow = root.position;
+            Vector3 rootDelta = rootNow - prevRootPos;
+            prevRootPos = rootNow;
 
             // A jump this large is a teleport (avatar reload, seat change, scene reset), not
             // motion. Carrying it into the Verlet history whips every chain; shift the whole
@@ -136,50 +143,95 @@ namespace PhysBones
             // Reset every included bone to its rest pose so each joint's rest direction
             // is measured from its (already-aimed) parent this substep.
             for (int i = 0; i < allBones.Count; i++)
-                allBones[i].localRotation = bindLocalRot[i];
+            {
+                Quaternion want = bindLocalRot[i];
+                Quaternion have = allBones[i].localRotation;
+                if (have.x != want.x || have.y != want.y || have.z != want.z || have.w != want.w)
+                    allBones[i].localRotation = want;
+            }
 
             for (int i = 0; i < joints.Count; i++)
             {
                 Joint j = joints[i];
-                Vector3 parentPos = j.t.position;
+                Vector3 parentPos;
+                Quaternion jointRot;
+                j.t.GetPositionAndRotation(out parentPos, out jointRot);
                 Vector3 restTip = j.t.TransformPoint(j.childLocalPos);
-                float boneLen = (restTip - parentPos).magnitude;
+
+                // The vector maths below is written out per component instead of ~30 Vector3
+                // operator calls. Each (float) cast sits where a Vector3 operator or a float
+                // argument would round, so every value is identical to the operator version
+                // (Mono keeps unrounded intermediates otherwise).
+                float rx = (float)(restTip.x - parentPos.x), ry = (float)(restTip.y - parentPos.y), rz = (float)(restTip.z - parentPos.z);
+                float boneLen = (float)System.Math.Sqrt(rx * rx + ry * ry + rz * rz);
                 if (boneLen < 1e-6f) continue;
 
                 // Verlet inertia, capped: a tip can carry at most two bone-lengths of motion
                 // per substep. Anything above that is an artifact (teleport remnant, constraint
                 // fight), and uncapped it feeds back through the length constraint as whip.
-                Vector3 vel = (j.tip - j.prevTip) * (1f - damping);
+                Vector3 tip = j.tip, prevTip = j.prevTip;
+                float keep = (float)(1f - damping);
+                float vx = (float)((float)(tip.x - prevTip.x) * keep);
+                float vy = (float)((float)(tip.y - prevTip.y) * keep);
+                float vz = (float)((float)(tip.z - prevTip.z) * keep);
                 float maxVel = boneLen * 2f;
-                if (vel.sqrMagnitude > maxVel * maxVel) vel = vel.normalized * maxVel;
+                if ((float)(vx * vx + vy * vy + vz * vz) > maxVel * maxVel)
+                {
+                    float vm = (float)System.Math.Sqrt(vx * vx + vy * vy + vz * vz);
+                    if (vm > 1E-05f) { vx = (float)(vx / vm); vy = (float)(vy / vm); vz = (float)(vz / vm); }
+                    else { vx = 0f; vy = 0f; vz = 0f; }
+                    vx = (float)(vx * maxVel); vy = (float)(vy * maxVel); vz = (float)(vz * maxVel);
+                }
 
                 // Gravity with rest-pose falloff.
                 float gFactor = 1f;
                 if (falloff > 0f)
                 {
-                    float disp = Mathf.Clamp01((j.tip - restTip).magnitude / boneLen);
+                    float ex = (float)(tip.x - restTip.x), ey = (float)(tip.y - restTip.y), ez = (float)(tip.z - restTip.z);
+                    float disp = Mathf.Clamp01((float)System.Math.Sqrt(ex * ex + ey * ey + ez * ez) / boneLen);
                     gFactor = Mathf.Lerp(1f, disp, falloff);
                 }
-                Vector3 g = gravityDir * (gPow * gFactor) * dt * dt;
+                float gk = (float)(gPow * gFactor);
+                float gx = (float)((float)((float)(gravityDir.x * gk) * dt) * dt);
+                float gy = (float)((float)((float)(gravityDir.y * gk) * dt) * dt);
+                float gz = (float)((float)((float)(gravityDir.z * gk) * dt) * dt);
 
-                Vector3 next = j.tip + vel + g;
+                float nx = (float)((float)(tip.x + vx) + gx);
+                float ny = (float)((float)(tip.y + vy) + gy);
+                float nz = (float)((float)(tip.z + vz) + gz);
 
-                // Pull back toward the animated rest position.
-                next = Vector3.Lerp(next, restTip, pullStrength);
+                // Pull back toward the animated rest position (Vector3.Lerp, written out).
+                float pt = Mathf.Clamp01(pullStrength);
+                nx = (float)(nx + (restTip.x - nx) * pt);
+                ny = (float)(ny + (restTip.y - ny) * pt);
+                nz = (float)(nz + (restTip.z - nz) * pt);
 
                 // Length constraint (allow stretch up to maxStretch, no squish).
-                Vector3 dir = next - parentPos;
-                float dlen = dir.magnitude;
+                float dx = (float)(nx - parentPos.x), dy = (float)(ny - parentPos.y), dz = (float)(nz - parentPos.z);
+                float dlen = (float)System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
                 float L = Mathf.Clamp(dlen, boneLen, boneLen * (1f + maxStretch));
-                next = dlen > 1e-6f ? parentPos + dir * (L / dlen) : restTip;
+                Vector3 next;
+                if (dlen > 1e-6f)
+                {
+                    float q = (float)(L / dlen);
+                    next = new Vector3((float)(parentPos.x + (float)(dx * q)), (float)(parentPos.y + (float)(dy * q)), (float)(parentPos.z + (float)(dz * q)));
+                }
+                else next = restTip;
 
                 // Stiffness: bend the bone back toward its rest direction.
                 if (stiffBlend > 0f)
                 {
-                    Vector3 nd = (next - parentPos).normalized;
-                    Vector3 rd = (restTip - parentPos).normalized;
-                    Vector3 bd = Vector3.Slerp(nd, rd, stiffBlend).normalized;
-                    next = parentPos + bd * L;
+                    // (next - parentPos).normalized and (restTip - parentPos).normalized, written out;
+                    // the rest direction's length is boneLen, computed the same way above.
+                    float ax = (float)(next.x - parentPos.x), ay = (float)(next.y - parentPos.y), az = (float)(next.z - parentPos.z);
+                    float am = (float)System.Math.Sqrt(ax * ax + ay * ay + az * az);
+                    Vector3 nd = am > 1E-05f ? new Vector3((float)(ax / am), (float)(ay / am), (float)(az / am)) : Vector3.zero;
+                    Vector3 rd = boneLen > 1E-05f ? new Vector3((float)(rx / boneLen), (float)(ry / boneLen), (float)(rz / boneLen)) : Vector3.zero;
+                    Vector3 sl = Vector3.Slerp(nd, rd, stiffBlend);
+                    float bm = (float)System.Math.Sqrt(sl.x * sl.x + sl.y * sl.y + sl.z * sl.z);
+                    float bx = 0f, by = 0f, bz = 0f;
+                    if (bm > 1E-05f) { bx = (float)(sl.x / bm); by = (float)(sl.y / bm); bz = (float)(sl.z / bm); }
+                    next = new Vector3((float)(parentPos.x + (float)(bx * L)), (float)(parentPos.y + (float)(by * L)), (float)(parentPos.z + (float)(bz * L)));
                 }
 
                 // Angle limit cone.
@@ -226,10 +278,9 @@ namespace PhysBones
                 j.prevTip += next - beforeCollision;
 
                 // Aim the bone so its rest child-direction points at the solved tip.
-                Vector3 restDirW = restTip - parentPos;
-                Vector3 newDirW = next - parentPos;
-                if (restDirW.sqrMagnitude > 1e-12f && newDirW.sqrMagnitude > 1e-12f)
-                    j.t.rotation = Quaternion.FromToRotation(restDirW, newDirW) * j.t.rotation;
+                float wx = (float)(next.x - parentPos.x), wy = (float)(next.y - parentPos.y), wz = (float)(next.z - parentPos.z);
+                if ((float)(rx * rx + ry * ry + rz * rz) > 1e-12f && (float)(wx * wx + wy * wy + wz * wz) > 1e-12f)
+                    j.t.rotation = Quaternion.FromToRotation(new Vector3(rx, ry, rz), new Vector3(wx, wy, wz)) * jointRot;
             }
         }
     }

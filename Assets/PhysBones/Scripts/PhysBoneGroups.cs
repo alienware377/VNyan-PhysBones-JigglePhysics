@@ -178,7 +178,9 @@ namespace PhysBones
             float P = 12f;
             float cw = GRP_PICKER_W - 2f * P;
             float y = 10f;
-            pickerTitle = MakeLabel(picker.transform, "Grp_PickTitle", "", P, y, cw, 20f, 13, TextAnchor.MiddleCenter, FontStyle.Bold);
+            // The title ends 4 px left of the shared X (PluginChrome) in the top-right corner.
+            float titleW = GRP_PICKER_W - P - PluginChrome.XInset - PluginChrome.XSize - 4f;
+            pickerTitle = MakeLabel(picker.transform, "Grp_PickTitle", "", P, y, titleW, 20f, 13, TextAnchor.MiddleCenter, FontStyle.Bold);
             y += 24f;
             MakeLabel(picker.transform, "Grp_FindLbl", "Find", P, y, 40f, 26f, 13, TextAnchor.MiddleLeft, FontStyle.Normal);
             pickerFilter = MakeInput(picker.transform, "Grp_Find", P + 42f, y, cw - 42f, 26f, "type part of a name");
@@ -221,6 +223,9 @@ namespace PhysBones
             pickerScroll.vertical = true;
             pickerScroll.movementType = ScrollRect.MovementType.Clamped;
             pickerScroll.scrollSensitivity = 18f;
+
+            // The shared X closes the picker too ("Done" stays as the confirm).
+            PluginChrome.EnsureCloseX(picker.GetComponent<RectTransform>(), ClosePicker, uiFont);
 
             picker.SetActive(false);
         }

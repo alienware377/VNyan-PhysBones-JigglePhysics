@@ -26,8 +26,13 @@ namespace JigglePhysics
 
         // Filled fresh at the top of each Solve() from the animated rest pose.
         Vector3 restTip0, parentPos0;
+        Quaternion restRot0;  // world rotation in the rest pose
         float boneLen0;
         float framePenetration;
+
+        // The aim the last substep asked for; written to the transform once, after all substeps.
+        Quaternion aimRot;
+        bool aimSet;
 
         // Smoothed scale multiplier (relative to bindLocalScale).
         Vector3 curMult = Vector3.one;
@@ -39,6 +44,7 @@ namespace JigglePhysics
         public Vector3 Tip { get { return tip; } }
         public float SelfRadius { get { return Mathf.Max(0f, cfg.selfRadius); } }
         public string Name { get { return cfg.name; } }
+        public Transform Bone { get { return t; } }
 
         public JiggleBone(JiggleBoneConfig c) { cfg = c; }
 
@@ -93,26 +99,30 @@ namespace JigglePhysics
             restTip0 = t.TransformPoint(tipLocal);
             boneLen0 = (restTip0 - parentPos0).magnitude;
             if (boneLen0 < 1e-6f) return;
+            restRot0 = t.rotation;
 
             framePenetration = 0f;
 
             int sub = Mathf.Clamp(substeps, 1, 8);
             float sdt = dt / sub;
+            aimSet = false;
             for (int s = 0; s < sub; s++)
                 Substep(sdt, gravityDir);
+
+            // Only the last substep's aim is ever seen (each substep starts again from the rest
+            // pose), so the bone is written once instead of once per substep.
+            if (aimSet) t.rotation = aimRot;
 
             UpdateDeformation(dt, gravityDir);
         }
 
         void Substep(float dt, Vector3 gravityDir)
         {
-            // Reset to rest so restTip is measured from the animated (current) pose this substep.
-            t.localRotation = bindLocalRot;
-
-            Vector3 parentPos = t.position;
-            Vector3 restTip = t.TransformPoint(tipLocal);
-            float boneLen = (restTip - parentPos).magnitude;
-            if (boneLen < 1e-6f) return;
+            // Nothing above this bone moves while it is solved, so the rest pose measured in Solve
+            // holds for every substep (the transform stays in that rest pose until the end).
+            Vector3 parentPos = parentPos0;
+            Vector3 restTip = restTip0;
+            float boneLen = boneLen0;
 
             float bounce = Mathf.Clamp01(cfg.bounce);
             float damp = Mathf.Clamp01(Mathf.Lerp(0.22f, 0.02f, bounce) + 0.4f * Mathf.Clamp01(cfg.damping));
@@ -186,11 +196,11 @@ namespace JigglePhysics
             prevTip = tip;
             tip = next;
 
-            // Aim the bone's forward at the solved tip.
+            // Aim the bone's forward at the solved tip (applied in Solve, after the last substep).
             Vector3 restDirW = restTip - parentPos;
             Vector3 newDirW = next - parentPos;
-            if (restDirW.sqrMagnitude > 1e-12f && newDirW.sqrMagnitude > 1e-12f)
-                t.rotation = Quaternion.FromToRotation(restDirW, newDirW) * t.rotation;
+            aimSet = restDirW.sqrMagnitude > 1e-12f && newDirW.sqrMagnitude > 1e-12f;
+            if (aimSet) aimRot = Quaternion.FromToRotation(restDirW, newDirW) * restRot0;
         }
 
         static Vector3 PinLength(Vector3 from, Vector3 p, float len)

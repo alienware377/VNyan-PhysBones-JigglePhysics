@@ -12,6 +12,7 @@
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.TextRenderingModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.IMGUIModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.InputLegacyModule.dll"
+-reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.UnityWebRequestModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\VNyanInterface.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\Newtonsoft.Json.dll"
 "Assets\PhysBones\Scripts\PhysBoneConfig.cs"
@@ -24,3 +25,4 @@
 "Assets\PhysBones\Scripts\PhysBoneGroups.cs"
 "Assets\PhysBones\Scripts\PhysBoneGroupsSelfTest.cs"
 "Assets\PhysBones\Scripts\PhysBoneTree.cs"
+"Assets\PhysBones\Scripts\PluginChrome.cs"

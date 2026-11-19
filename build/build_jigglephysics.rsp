@@ -12,6 +12,7 @@
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.TextRenderingModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.IMGUIModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.InputLegacyModule.dll"
+-reference:"C:\Program Files\VNyan\VNyan_Data\Managed\UnityEngine.UnityWebRequestModule.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\VNyanInterface.dll"
 -reference:"C:\Program Files\VNyan\VNyan_Data\Managed\Newtonsoft.Json.dll"
 "Assets\JigglePhysics\Scripts\JiggleConfig.cs"
@@ -24,3 +25,4 @@
 "Assets\JigglePhysics\Scripts\JiggleGroups.cs"
 "Assets\JigglePhysics\Scripts\JiggleGroupsSelfTest.cs"
 "Assets\JigglePhysics\Scripts\JiggleTree.cs"
+"Assets\JigglePhysics\Scripts\PluginChrome.cs"

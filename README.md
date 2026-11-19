@@ -15,7 +15,11 @@ Both have live tuning windows, and both save to your AppData folder, so you neve
 > Pose Studio stays there; PhysBones and Jiggle Physics now live here. Their earlier history and
 > releases (v1.0.0 to v2.4.0) are in that repo.
 
-> **New in v2.5.0:** **Copy / Paste** settings between bones or chains, and **Groups**: tick a
+> **New in v2.6.0:** both solvers are faster (Jiggle Physics about 1.25x, PhysBones about 1.2x,
+> and up to 1.45x with colliders) while moving exactly the same as before. Every window has an
+> **X** at the top-right to close it, and an **Update** button shows up when a newer release is out.
+>
+> **v2.5.0:** **Copy / Paste** settings between bones or chains, and **Groups**: tick a
 > set of bones and give them all the same settings at once, or edit them together live. The
 > picker at the top is now a **folder tree** of your groups.
 > See [Copy, paste and groups](#copy-paste-and-groups).
@@ -158,7 +162,9 @@ Click **VRChat PhysBones** in the Plugins panel to open the draggable tuning win
 - **Sliders:** `Pull`, `Spring`, `Stiffness`, `Gravity` (-1 to 1), `Grav Falloff`, `Immobile`,
   `Max Angle`, `Radius`, `Max Stretch`. They apply **instantly**, no reload needed.
 - **Bones** opens the bone browser (below). **Remove** deletes the selected chain.
-- **Import / Show / Clear Colliders**, **Reload**, **Save**, **Close**.
+- **Import / Show / Clear Colliders**, **Reload**, **Save**.
+- The **X** at the top-right closes the window (the bone browser and the group picker have one too).
+  When a newer release is out, an **Update** button shows next to it and opens the release page.
 - **Copy / paste & groups:** see [above](#copy-paste-and-groups).
 
 ### Bone browser

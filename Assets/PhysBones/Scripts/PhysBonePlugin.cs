@@ -20,6 +20,11 @@ namespace PhysBones
         const string BUTTON_NAME = "VRChat PhysBones";
         const string CONFIG_FILE = "physbones.json";
 
+        // Release this build belongs to, and the GitHub repo the update check reads
+        // (one release covers PhysBones and Jiggle Physics).
+        public const string VERSION = "v2.6.0";
+        public const string REPO = "alienware377/VNyan-PhysBones-JigglePhysics";
+
         // Slider keys -> ChainConfig fields. Order also defines the UI layout order.
         static readonly string[] SLIDER_KEYS =
         {
@@ -102,6 +107,11 @@ namespace PhysBones
             LoadConfig();
             SetupWindow();
             SetupBoneBrowser();
+            // "Update vX" button left of the window's X when a newer release is out; the title
+            // moves to the left to make room for it.
+            if (window != null)
+                PluginChrome.CheckForUpdate(this, window.GetComponent<RectTransform>(), REPO, VERSION, "[PhysBones] ",
+                    uiFont, 0f, OnUpdateBadge);
             Debug.Log("[PhysBones] initialized. Config: " + configPath);
         }
 
@@ -135,6 +145,7 @@ namespace PhysBones
             float dt = Mathf.Min(Time.deltaTime, 1f / 30f); // clamp lag spikes
             if (dt <= 0f) return;
 
+            for (int i = 0; i < runtimeColliders.Count; i++) runtimeColliders[i].BeginFrame();
             for (int i = 0; i < chains.Count; i++)
                 chains[i].Solve(dt);
         }
@@ -219,9 +230,68 @@ namespace PhysBones
             catch (Exception e) { Debug.LogWarning("[PhysBones] copy/paste + groups section failed: " + e); }
             try { SetupTree(); }
             catch (Exception e) { Debug.LogWarning("[PhysBones] chain tree failed: " + e); }
+            // Last, so the X sits above the runtime-built UI.
+            try { SetupCloseX(); }
+            catch (Exception e) { Debug.LogWarning("[PhysBones] close button failed: " + e); }
 
             // Hidden until the plugin button is clicked.
             window.SetActive(false);
+        }
+
+        // The shared X at the top-right closes the window (PluginChrome.cs). The baked bottom
+        // Close is hidden and Bones / Remove / Reload / Save spread over its space.
+        void SetupCloseX()
+        {
+            RectTransform wrt = window.GetComponent<RectTransform>();
+            if (wrt == null) return;
+            ClearOfCloseX(wrt, window.transform.Find("Title") as RectTransform, true);
+            PluginChrome.EnsureCloseX(wrt, OnCloseClicked, uiFont);
+            PluginChrome.HideOtherClose(wrt, "Button_Close");
+        }
+
+        // The update badge sits at x (W-156)..(W-44) of the header, over the right half of the
+        // centred title: the title goes left-aligned into the space left of the badge.
+        void OnUpdateBadge(RectTransform badge)
+        {
+            if (window == null || badge == null) return;
+            RectTransform wrt = window.GetComponent<RectTransform>();
+            RectTransform title = window.transform.Find("Title") as RectTransform;
+            if (wrt == null || title == null) return;
+            float badgeLeft, top, right, bottom;
+            BoxInPanel(wrt, badge, out badgeLeft, out top, out right, out bottom);
+            const float left = 12f;   // the window's content padding
+            title.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, left, Mathf.Max(0f, badgeLeft - 6f - left));
+            Text tt = title.GetComponent<Text>();
+            if (tt != null) tt.alignment = TextAnchor.MiddleLeft;
+        }
+
+        // Narrows a header control that reaches under the X (x W-38..W-12, y 8..32) so it ends
+        // 4 px left of it. keepCentre trims the left side by the same amount, so centred text
+        // stays centred. Only for direct children of the panel.
+        static void ClearOfCloseX(RectTransform panel, RectTransform rt, bool keepCentre)
+        {
+            if (panel == null || rt == null || rt.parent != panel) return;
+            float left, top, right, bottom;
+            BoxInPanel(panel, rt, out left, out top, out right, out bottom);
+            float xLeft = panel.rect.width - PluginChrome.XInset - PluginChrome.XSize - 4f;
+            if (right <= xLeft || bottom <= PluginChrome.XTop || top >= PluginChrome.XTop + PluginChrome.XHeight) return;
+            if (keepCentre) left += right - xLeft;
+            if (xLeft - left < 20f) return;
+            rt.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, left, xLeft - left);
+        }
+
+        // A control's box in the panel, measured from the panel's top-left corner (y down).
+        static void BoxInPanel(RectTransform panel, RectTransform rt, out float left, out float top, out float right, out float bottom)
+        {
+            Vector3[] c = new Vector3[4];
+            rt.GetWorldCorners(c);
+            Rect pr = panel.rect;
+            Vector3 bl = panel.InverseTransformPoint(c[0]);
+            Vector3 tr = panel.InverseTransformPoint(c[2]);
+            left = bl.x - pr.xMin;
+            right = tr.x - pr.xMin;
+            top = pr.yMax - tr.y;
+            bottom = pr.yMax - bl.y;
         }
 
         T FindControl<T>(string name) where T : Component
@@ -688,6 +758,8 @@ namespace PhysBones
 
             Button close = FindIn<Button>(boneWindow, "Button_BoneClose");
             if (close != null) close.onClick.AddListener(CloseBoneBrowser);
+            try { SetupBoneCloseX(brt, close); }
+            catch (Exception e) { Debug.LogWarning("[PhysBones] bone browser close button failed: " + e); }
 
             boneWindow.SetActive(false);
         }
@@ -713,6 +785,23 @@ namespace PhysBones
         void CloseBoneBrowser()
         {
             if (boneWindow != null) boneWindow.SetActive(false);
+        }
+
+        // The shared X closes the bone browser. The old Close had a row of its own under the
+        // status line: it is hidden and the bone list grows up into that row.
+        void SetupBoneCloseX(RectTransform brt, Button oldClose)
+        {
+            if (brt == null) return;
+            ClearOfCloseX(brt, boneWindow.transform.Find("Title") as RectTransform, true);
+            PluginChrome.EnsureCloseX(brt, CloseBoneBrowser, uiFont);
+            if (oldClose == null || PluginChrome.HideOtherClose(brt, "Button_BoneClose") == 0) return;
+            RectTransform scroll = FindIn<RectTransform>(boneWindow, "BoneScrollView");
+            if (scroll == null) return;
+            float l, closeTop, r, b, scrollTop;
+            BoxInPanel(brt, (RectTransform)oldClose.transform, out l, out closeTop, out r, out b);
+            BoxInPanel(brt, scroll, out l, out scrollTop, out r, out b);
+            float grow = scrollTop - closeTop;
+            if (grow > 0f) scroll.offsetMax = new Vector2(scroll.offsetMax.x, scroll.offsetMax.y + grow);
         }
 
         void SetBoneStatus(string msg)
@@ -992,6 +1081,11 @@ namespace PhysBones
                         "[PhysBones] chain '{0}': no simulatable bones under '{1}'",
                         pendCfg[i].name, pendCfg[i].rootBone));
             }
+
+            // Colliders on bones no chain moves are measured once per frame.
+            HashSet<Transform> moved = new HashSet<Transform>();
+            for (int i = 0; i < chains.Count; i++) chains[i].AddMovedBones(moved);
+            PhysBoneCollider.MarkCacheable(runtimeColliders, moved);
         }
 
         // ----- native (VRM SpringBone / MagicaCloth / SPCR / DynamicBone) override -----

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace PhysBones
@@ -16,6 +17,43 @@ namespace PhysBones
         public float radius = 0.1f;
         public float height = 0f;
         public bool useEndPoint = false;
+
+        // Per-frame cache of the world shape. Only used when nothing the physics moves sits above
+        // the collider's bone (see MarkCacheable); otherwise the bone is measured on every call,
+        // because a solved bone can carry it along mid-frame.
+        public bool cacheable;
+        bool cached;
+        Vector3 cacheCenter, cacheAxis, cacheA, cacheB;
+
+        // Called once per frame before solving.
+        public void BeginFrame() { cached = false; }
+
+        void Fill()
+        {
+            if (type == ColliderType.Capsule) CapsuleSegment(out cacheA, out cacheB);
+            else
+            {
+                cacheCenter = WorldPoint(offset);
+                if (type == ColliderType.Plane) cacheAxis = WorldDir(axis);
+            }
+            cached = true;
+        }
+
+        // Marks every collider whose bone is not (under) a bone the physics moves.
+        public static void MarkCacheable(List<PhysBoneCollider> cols, HashSet<Transform> moved)
+        {
+            if (cols == null) return;
+            for (int i = 0; i < cols.Count; i++)
+            {
+                PhysBoneCollider c = cols[i];
+                if (c == null) continue;
+                bool ok = true;
+                for (Transform t = c.bone; t != null && ok; t = t.parent)
+                    if (moved != null && moved.Contains(t)) ok = false;
+                c.cacheable = ok;
+                c.cached = false;
+            }
+        }
 
         Vector3 WorldPoint(Vector3 local)
         {
@@ -55,7 +93,8 @@ namespace PhysBones
                 case ColliderType.Sphere:
                 {
                     float r = radius + boneRadius;
-                    Vector3 c = WorldPoint(offset);
+                    if (cacheable && !cached) Fill();
+                    Vector3 c = cacheable ? cacheCenter : WorldPoint(offset);
                     Vector3 d = p - c;
                     float m = d.magnitude;
                     if (m < r)
@@ -66,7 +105,12 @@ namespace PhysBones
                 {
                     float r = radius + boneRadius;
                     Vector3 a, b;
-                    CapsuleSegment(out a, out b);
+                    if (cacheable)
+                    {
+                        if (!cached) Fill();
+                        a = cacheA; b = cacheB;
+                    }
+                    else CapsuleSegment(out a, out b);
                     Vector3 cp = ClosestOnSegment(a, b, p);
                     Vector3 d = p - cp;
                     float m = d.magnitude;
@@ -76,8 +120,9 @@ namespace PhysBones
                 }
                 case ColliderType.Plane:
                 {
-                    Vector3 c = WorldPoint(offset);
-                    Vector3 n = WorldDir(axis);
+                    if (cacheable && !cached) Fill();
+                    Vector3 c = cacheable ? cacheCenter : WorldPoint(offset);
+                    Vector3 n = cacheable ? cacheAxis : WorldDir(axis);
                     float dist = Vector3.Dot(p - c, n);
                     if (dist < boneRadius)
                         p += n * (boneRadius - dist);
